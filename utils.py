@@ -119,10 +119,10 @@ def test_clustering_parameters(analyzer, file_paths, data_dir, test_output_dir):
                 print("  → No clusters found")
     
     if best_params:
-        print(f"\n🎯 RECOMMENDED PARAMETERS:")
+        print(f"\n RECOMMENDED PARAMETERS:")
         print(f"   eps = {best_params['eps']}")
         print(f"   min_samples = {best_params['min_samples']}")
     else:
-        print("\n⚠️  No optimal parameters found")
+        print("\n No optimal parameters found")
     
     return best_params

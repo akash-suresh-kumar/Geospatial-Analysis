@@ -5,7 +5,18 @@ from shapely.geometry import Point
 from shapely.ops import unary_union
 import os
 import warnings
+import shapely
 warnings.filterwarnings('ignore')
+
+# Handle make_valid based on Shapely version
+try:
+    from shapely import make_valid  # Shapely >= 2.0
+except ImportError:
+    def make_valid(geom):
+        """Fallback for older Shapely versions: Buffer slightly to fix invalid geometries"""
+        if geom is None or geom.is_empty:
+            return geom
+        return geom.buffer(0)  # Tiny buffer to fix invalid geometries
 
 class ServiceGapAnalyzer:
     def __init__(self, target_crs='EPSG:4326'):
@@ -14,7 +25,18 @@ class ServiceGapAnalyzer:
         self.boundaries = None
         self.served_areas = None
         self.underserved_areas = None
-        
+        self.projected_crs = None  # Will be set dynamically for area calculations
+
+    def _get_projected_crs(self, gdf):
+        """Determine an appropriate projected CRS based on the data's centroid."""
+        if gdf.crs is None or gdf.empty:
+            return self.target_crs
+        centroid = gdf.geometry.centroid.iloc[0]
+        # Approximate UTM zone based on longitude
+        utm_zone = int((centroid.x + 180) / 6) + 1
+        hemisphere = 'north' if centroid.y >= 0 else 'south'
+        return f'EPSG:326{utm_zone}' if hemisphere == 'north' else f'EPSG:327{utm_zone}'
+
     def load_data(self, poi_path, boundary_path, data_dir):
         try:
             # Load POI data
@@ -30,7 +52,7 @@ class ServiceGapAnalyzer:
             
             print(f"Loaded {len(self.pois)} POIs")
         except Exception as e:
-            print(f"Error loading POI file: {e}")
+            print(f"Error loading POI file {poi_path}: {e}")
             return False
         
         try:
@@ -41,15 +63,19 @@ class ServiceGapAnalyzer:
             if self.boundaries.crs != self.target_crs:
                 self.boundaries = self.boundaries.to_crs(self.target_crs)
             
+            # Set projected CRS for area calculations
+            self.projected_crs = self._get_projected_crs(self.boundaries)
+            print(f"Using projected CRS: {self.projected_crs}")
             print(f"Loaded {len(self.boundaries)} boundaries")
         except Exception as e:
-            print(f"Error loading boundary file: {e}")
+            print(f"Error loading boundary file {boundary_path}: {e}")
             return False
             
         return True
     
     def cluster_pois(self, eps=0.01, min_samples=2):
         if self.pois is None or len(self.pois) == 0:
+            print("No POIs available for clustering")
             return None
             
         coords = np.array([[point.x, point.y] for point in self.pois.geometry])
@@ -63,8 +89,9 @@ class ServiceGapAnalyzer:
         print(f"Found {n_clusters} POI clusters")
         return poi_clusters
     
-    def create_service_areas(self, poi_clusters, buffer_distance=0.02):
+    def create_service_areas(self, poi_clusters, buffer_distance=0.05):
         if poi_clusters is None or len(poi_clusters) == 0:
+            print("No POI clusters available for creating service areas")
             return None
             
         service_areas = []
@@ -74,32 +101,35 @@ class ServiceGapAnalyzer:
             points = [Point(row.geometry.x, row.geometry.y) for _, row in cluster_pois.iterrows()]
             
             if len(points) >= 3:
-                service_area = unary_union(points).convex_hull.buffer(buffer_distance)
+                service_area = make_valid(unary_union(points).convex_hull.buffer(buffer_distance))
             else:
-                service_area = unary_union([p.buffer(buffer_distance) for p in points])
+                service_area = make_valid(unary_union([p.buffer(buffer_distance) for p in points]))
             
             service_areas.append({'cluster_id': cluster_id, 'geometry': service_area})
         
         service_areas_gdf = gpd.GeoDataFrame(service_areas, crs=self.target_crs)
         self.served_areas = gpd.GeoDataFrame({
-            'geometry': [unary_union(service_areas_gdf.geometry)]
+            'geometry': [make_valid(unary_union(service_areas_gdf.geometry))]
         }, crs=self.target_crs)
         
         return service_areas_gdf
     
     def identify_underserved_areas(self):
         if self.boundaries is None or self.served_areas is None:
+            print("Boundaries or served areas not available for underserved area identification")
             return None
             
-        unified_boundaries = unary_union(self.boundaries.geometry)
-        unified_served = unary_union(self.served_areas.geometry)
+        unified_boundaries = make_valid(unary_union(self.boundaries.geometry))
+        unified_served = make_valid(unary_union(self.served_areas.geometry))
         underserved_geometry = unified_boundaries.difference(unified_served)
         
+        underserved_polys = []
         if hasattr(underserved_geometry, 'geoms'):
             underserved_polys = [{'geometry': geom} for geom in underserved_geometry.geoms 
-                               if geom.area > 0]
+                               if geom.is_valid and geom.area > 0]
         else:
-            underserved_polys = [{'geometry': underserved_geometry}] if underserved_geometry.area > 0 else []
+            if underserved_geometry.is_valid and underserved_geometry.area > 0:
+                underserved_polys = [{'geometry': underserved_geometry}]
         
         self.underserved_areas = gpd.GeoDataFrame(underserved_polys, crs=self.target_crs)
         print(f"Identified {len(self.underserved_areas)} underserved areas")
@@ -107,11 +137,18 @@ class ServiceGapAnalyzer:
     
     def calculate_coverage_stats(self):
         if self.boundaries is None or self.served_areas is None:
+            print("Boundaries or served areas not available for coverage stats")
             return None
             
-        total_area = unary_union(self.boundaries.geometry).area
-        served_area = unary_union(self.served_areas.geometry).area
-        coverage_pct = (served_area / total_area) * 100
+        # Reproject to projected CRS for accurate area calculations
+        boundaries_projected = self.boundaries.to_crs(self.projected_crs)
+        served_areas_projected = self.served_areas.to_crs(self.projected_crs)
+        
+        total_area = make_valid(unary_union(boundaries_projected.geometry)).area
+        served_area = make_valid(unary_union(served_areas_projected.geometry)).area
+        
+        # Avoid division by zero and cap coverage at 100%
+        coverage_pct = min((served_area / total_area * 100) if total_area > 0 else 0, 100.0)
         
         return {
             'total_area': total_area,
@@ -120,7 +157,7 @@ class ServiceGapAnalyzer:
             'underserved_areas_count': len(self.underserved_areas) if self.underserved_areas is not None else 0
         }
     
-    def run_analysis(self, poi_path, boundary_path, data_dir, output_dir, eps=0.01, buffer_distance=0.02):
+    def run_analysis(self, poi_path, boundary_path, data_dir, output_dir, eps=0.01, buffer_distance=0.05):
         os.makedirs(output_dir, exist_ok=True)
         
         if not self.load_data(poi_path, boundary_path, data_dir):
