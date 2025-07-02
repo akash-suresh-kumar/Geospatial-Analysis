@@ -1,8 +1,6 @@
 pandas
 numpy
-scikit-learn
 hdbscan
-scipy
 matplotlib
 requests
 urllib3
@@ -10,3 +8,8 @@ plotly
 pytest
 jupyter
 ipython
+geopandas
+scikit-learn
+scipy
+rasterio
+shapely
