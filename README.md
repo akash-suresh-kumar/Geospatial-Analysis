@@ -1,3 +1,4 @@
+
 # Comprehensive Geospatial Analysis Tool
 
 This repository provides a complete Python-based toolkit for performing two types of geospatial analysis:
@@ -5,90 +6,103 @@ This repository provides a complete Python-based toolkit for performing two type
 1. **Tourism Hotspot Analysis**
 2. **Service Gap Analysis**
 
-It is designed to work with spatial vector datasets such as `.shp`, `.geojson`, `.gpkg`, and others. The toolkit leverages clustering algorithms (KMeans and DBSCAN), spatial buffers, and raster heatmaps to generate analytical outputs about geographic patterns and service coverage.
+It works with spatial vector datasets such as `.shp`, `.geojson`, `.gpkg`, `.json`, `.kml`, and `.gml`. The toolkit uses clustering algorithms (KMeans and DBSCAN), spatial buffers, and raster heatmaps to extract geographic patterns and service coverage insights.
 
 ---
 
 ## Features
 
-- **Tourism Hotspot Analysis**
-  - Detects and clusters tourism-related POIs using KMeans.
-  - Creates hotspot polygons with buffer and convex hull techniques.
-  - Generates a raster heatmap using KDE (Kernel Density Estimation).
-  - Outputs GeoJSONs and a `.tiff` heatmap raster.
+### Tourism Hotspot Analysis
+- Clusters tourism-related POIs using **KMeans**.
+- Creates hotspot polygons via **buffer** and **convex hull**.
+- Generates a **raster heatmap** using KDE.
+- Outputs: 
+  - `clustered_points.geojson`
+  - `tourism_hotspots.geojson`
+  - `tourism_heatmap.tiff`
 
-- **Service Gap Analysis**
-  - Clusters service POIs (e.g., hospitals, schools) using DBSCAN.
-  - Buffers clustered POIs to create service areas.
-  - Identifies underserved regions within defined administrative boundaries.
-  - Computes statistics on total area, served area, and underserved count.
+### Service Gap Analysis
+- Clusters service POIs (e.g., hospitals, schools) using **DBSCAN**.
+- Buffers clusters to model service areas.
+- Detects **underserved regions** within administrative boundaries.
+- Outputs:
+  - `poi_clusters.geojson`
+  - `service_areas.geojson`
+  - `well_served_areas.geojson`
+  - `underserved_areas.geojson`
 
-- **Input Management**
-  - Automatically detects relevant files using keyword-based filters.
-  - Supports `.shp`, `.geojson`, `.gpkg`, `.json`, `.kml`, and `.gml`.
+### Input Handling
+- Scans `data/` directory for spatial files.
+- Keyword-based auto detection for POIs and boundary layers.
 
-- **Modular Architecture**
-  - Clearly separated components for hotspot analysis, service coverage, utilities, and CLI orchestration.
+### Modular Design
+- Separated logic for each analysis type.
+- Common utilities for file operations and CLI orchestration.
 
 ---
 
 ## Directory Structure
 
+```
 geospatial-analysis/
-├── data/ # Input spatial datasets
-├── Outputs/ # All result outputs (GeoJSONs, TIFFs)
-│
-├── main.py # CLI entry point for users
-├── tourism_hotspot.py # TourismHotspotAnalyzer class
-├── service_gap_analyzer.py # ServiceGapAnalyzer class
-├── utils.py # Utility functions for file handling
-├── requirements.txt # Python package dependencies
-└── README.md # Project documentation
-
+├── data/                           # Input spatial datasets
+├── Outputs/                        # All result outputs (GeoJSONs, TIFFs)
+│   ├── comprehensive_tourism_analysis/
+│   │   ├── clustered_points.geojson
+│   │   ├── tourism_hotspots.geojson
+│   │   └── tourism_heatmap.tiff
+│   └── comprehensive_service_gap_analysis/
+│       ├── poi_clusters.geojson
+│       ├── service_areas.geojson
+│       ├── well_served_areas.geojson
+│       └── underserved_areas.geojson
+├── main.py                         # CLI entry point
+├── tourism_hotspot.py             # TourismHotspotAnalyzer class
+├── service_gap_analyzer.py        # ServiceGapAnalyzer class
+├── utils.py                        # File handling utilities
+├── requirements.txt               # Python dependencies
+└── README.md                      # Project documentation
+```
 
 ---
 
 ## Installation
 
-### Step 1: Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/akash-suresh-kumar/Geospatial-Analysis.git
 cd geospatial-analysis
+```
 
-### Set up Virtual Environment
+### 2. Set up virtual environment
+
+```bash
 python -m venv iudx
-source .\iudx\Scripts\activate
+source ./iudx/Scripts/activate  # On Windows
+```
 
-##Install Dependencies
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-###Output Details
-All output files will be created in the Outputs/ directory, in subfolders named after the analysis type.
+---
 
-Tourism Hotspot Outputs
-clustered_points.geojson
+## Output Structure
 
-tourism_hotspots.geojson
+All output files are saved to the `Outputs/` directory under analysis-specific subfolders.
 
-tourism_heatmap.tiff
+**Tourism Hotspot Outputs**
+- `clustered_points.geojson`
+- `tourism_hotspots.geojson`
+- `tourism_heatmap.tiff`
+- Location: `Outputs/comprehensive_tourism_analysis/`
 
-Location:
-
-Outputs/comprehensive_tourism_analysis/
-Outputs/comprehensive_tourism_analysis/detailed/
-Service Gap Analysis Outputs
-poi_clusters.geojson
-
-service_areas.geojson
-
-well_served_areas.geojson
-
-underserved_areas.geojson
-
-Location:
-
-Outputs/comprehensive_service_gap_analysis/
-Outputs/comprehensive_service_gap_analysis/detailed/
-
-
+**Service Gap Analysis Outputs**
+- `poi_clusters.geojson`
+- `service_areas.geojson`
+- `well_served_areas.geojson`
+- `underserved_areas.geojson`
+- Location: `Outputs/comprehensive_service_gap_analysis/`
