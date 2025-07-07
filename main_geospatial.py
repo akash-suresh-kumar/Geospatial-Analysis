@@ -20,12 +20,29 @@ def get_data_dir(): return os.path.join(os.getcwd(), 'data')
 def get_output_dir(): return os.path.join(os.getcwd(), 'output')
 
 def find_files_by_keywords(data_dir, keywords):
+    """Find files in the given data directory that have at least one of the given keywords in their filenames.
+
+    Parameters:
+        data_dir (str): The directory to search for files.
+        keywords (list[str]): The keywords to search for.
+
+    Returns:
+        list[str]: A list of file names (not full paths) that matched the given keywords.
+    """
     files = []
     for ext in ['*.shp', '*.geojson', '*.json', '*.gpkg']:
         files.extend(glob.glob(os.path.join(data_dir, ext)))
     return [os.path.basename(f) for f in files if any(k.lower() in os.path.basename(f).lower() for k in keywords)]
 
 def list_spatial_files(data_dir):
+    """List all spatial files in the given data directory.
+
+    Parameters:
+        data_dir (str): The directory to search for files.
+
+    Returns:
+        list[str]: A list of file names (not full paths) of all spatial files.
+    """
     files = []
     for ext in ['*.shp', '*.geojson', '*.json', '*.gpkg']:
         files.extend([os.path.basename(f) for f in glob.glob(os.path.join(data_dir, ext))])
@@ -33,10 +50,42 @@ def list_spatial_files(data_dir):
 
 class TourismHotspotAnalyzer:
     def __init__(self, target_crs='EPSG:4326'):
+        """
+        Initialize TourismHotspotAnalyzer object.
+
+        Parameters:
+            target_crs : str, optional
+                Target coordinate reference system (CRS) of the data. Defaults to 'EPSG:4326' (WGS84 lat/lon).
+
+        Attributes:
+            target_crs : str
+                Target coordinate reference system (CRS) of the data.
+            merged_data : geopandas.GeoDataFrame or None
+                Merged GeoDataFrame of all data loaded from files.
+            clusters : geopandas.GeoDataFrame or None
+                GeoDataFrame of tourism hotspot clusters.
+            hotspot_polygons : geopandas.GeoDataFrame or None
+                GeoDataFrame of tourism hotspot polygons.
+        """
         self.target_crs = target_crs
         self.merged_data = self.clusters = self.hotspot_polygons = None
         
     def load_vector_data(self, file_paths, data_dir):
+        """
+        Load vector data from files and merge into a single GeoDataFrame.
+
+        Parameters
+        ----------
+        file_paths : list[str]
+            List of file paths to load data from.
+        data_dir : str
+            Directory containing the files to load.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            Merged GeoDataFrame of all data loaded from files.
+        """
         gdfs = []
         for file_path in file_paths:
             try:
@@ -73,6 +122,19 @@ class TourismHotspotAnalyzer:
         return self.clusters
     
     def create_hotspot_polygons(self, buffer_distance=0.3):
+        """
+        Create polygons around clusters of points, buffering each cluster by a set distance.
+
+        Parameters
+        ----------
+        buffer_distance : float, optional
+            Distance to buffer each cluster's convex hull by. Defaults to 0.3.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of tourism hotspot polygons.
+        """
         if not self.clusters is None and len(self.clusters) > 0:
             hotspot_polygons = []
             for cluster_id in self.clusters['cluster'].unique():
@@ -85,6 +147,19 @@ class TourismHotspotAnalyzer:
         return self.hotspot_polygons
     
     def generate_heatmap_raster(self, output_path, resolution=0.05):
+        """
+        Generate a heatmap raster of the points in the merged data.
+
+        Parameters:
+            output_path : str
+                Path to save the heatmap raster to.
+            resolution : float, optional
+                Resolution of the heatmap raster in the units of the target CRS.
+                Defaults to 0.05.
+
+        Returns:
+            None
+        """
         if not self.merged_data is None and len(self.merged_data) > 0:
             coords = np.array([[p.x, p.y] for p in self.merged_data.geometry])
             buffer = 1.0
@@ -101,6 +176,33 @@ class TourismHotspotAnalyzer:
             print(f"Heatmap saved: {output_path}")
     
     def run_analysis(self, file_paths, data_dir, output_dir, n_clusters=25, create_heatmap=True, resolution=0.05):
+        """
+        Run a comprehensive tourism analysis on the given files.
+
+        This function loads and processes the given files, performs clustering to identify
+        tourism hotspots, and generates detailed outputs including hotspot polygons and a
+        heatmap raster.
+
+        Parameters:
+            file_paths (list[str]):
+                A list of paths to the spatial files to be analyzed.
+            data_dir (str):
+                The directory containing the spatial files.
+            output_dir (str):
+                The directory to save the outputs to.
+            n_clusters (int, optional):
+                The number of clusters to form. Defaults to 25.
+            create_heatmap (bool, optional):
+                Whether to generate a heatmap raster of the points. Defaults to True.
+            resolution (float, optional):
+                The resolution of the heatmap raster in the units of the target CRS.
+                Defaults to 0.05.
+
+        Returns:
+            dict:
+                A dictionary containing the results of the analysis, including the total
+                number of points, clusters created, and hotspot polygons.
+        """
         os.makedirs(output_dir, exist_ok=True)
         self.load_vector_data(file_paths, data_dir)
         if self.merged_data is None or len(self.merged_data) == 0:
@@ -131,6 +233,29 @@ class TourismHotspotAnalyzer:
 
 class ServiceGapAnalyzer:
     def __init__(self, target_crs='EPSG:4326'):
+        """
+        Initialize ServiceGapAnalyzer.
+
+        Parameters
+        ----------
+        target_crs : str, optional
+            Target coordinate reference system (CRS) of the data. Defaults to 'EPSG:4326' (WGS84 lat/lon).
+
+        Attributes
+        ----------
+        target_crs : str
+            Target coordinate reference system (CRS) of the data.
+        pois : geopandas.GeoDataFrame or None
+            GeoDataFrame of points of interest.
+        boundaries : geopandas.GeoDataFrame or None
+            GeoDataFrame of boundaries.
+        served_areas : geopandas.GeoDataFrame or None
+            GeoDataFrame of served areas.
+        underserved_areas : geopandas.GeoDataFrame or None
+            GeoDataFrame of underserved areas.
+        projected_crs : str or None
+            The projected CRS used for the analysis.
+        """
         self.target_crs = target_crs
         self.pois = self.boundaries = self.served_areas = self.underserved_areas = self.projected_crs = None
 
@@ -143,6 +268,23 @@ class ServiceGapAnalyzer:
         return f'EPSG:326{utm_zone}' if hemisphere == 'north' else f'EPSG:327{utm_zone}'
 
     def load_data(self, poi_path, boundary_path, data_dir):
+        """
+        Load POI and boundary data from files.
+
+        Parameters
+        ----------
+        poi_path : str
+            Path to POI file. If not absolute, data_dir is prepended.
+        boundary_path : str
+            Path to boundary file. If not absolute, data_dir is prepended.
+        data_dir : str
+            Directory path to prepend to poi_path and boundary_path if not absolute.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
         try:
             poi_full_path = os.path.join(data_dir, poi_path) if not os.path.isabs(poi_path) else poi_path
             self.pois = gpd.read_file(poi_full_path)
@@ -169,6 +311,23 @@ class ServiceGapAnalyzer:
         return True
     
     def find_optimal_eps(self, target_clusters=45, k=4):
+        """
+        Find the optimal epsilon value for DBSCAN clustering that results in the
+        closest number of clusters to the target number.
+
+        Parameters
+        ----------
+        target_clusters : int
+            The target number of clusters.
+        k : int
+            The number of nearest neighbors to consider when calculating the
+            density of each point.
+
+        Returns
+        -------
+        float
+            The optimal epsilon value.
+        """
         if self.pois is None or len(self.pois) == 0:
             return 0.01
         coords = np.array([[p.x, p.y] for p in self.pois.geometry])
@@ -185,6 +344,17 @@ class ServiceGapAnalyzer:
         return best_eps
     
     def cluster_pois(self, eps=None, min_samples=2, target_clusters=45):
+        """
+        Perform DBSCAN clustering on the loaded POIs with the given parameters.
+
+        Parameters:
+            eps (float): maximum distance between two samples for one to be considered as in the neighborhood of the other.
+            min_samples (int): number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+            target_clusters (int): target number of clusters to be formed
+
+        Returns:
+            geopandas.GeoDataFrame: a copy of the original POI data with an additional 'cluster' column indicating the cluster assignment of each point
+        """
         if self.pois is None or len(self.pois) == 0:
             print("No POIs available for clustering")
             return None
@@ -208,6 +378,16 @@ class ServiceGapAnalyzer:
         return poi_clusters
     
     def create_service_areas(self, poi_clusters, buffer_distance=0.3):
+        """
+        Create service areas by buffering POIs in each cluster.
+        
+        Args:
+            poi_clusters (GeoDataFrame): Clusters of POIs.
+            buffer_distance (float, optional): Distance to buffer each POI. Defaults to 0.3.
+        
+        Returns:
+            GeoDataFrame: A GeoDataFrame containing the service areas for each cluster.
+        """
         if poi_clusters is None or len(poi_clusters) == 0:
             return None
         
@@ -231,6 +411,15 @@ class ServiceGapAnalyzer:
         return service_areas_gdf
     
     def identify_underserved_areas(self, min_area_threshold=1e-8):
+        """
+        Identify areas that are not served by any POI service area.
+        
+        Args:
+            min_area_threshold (float, optional): Minimum area of an underserved area to be considered. Defaults to 1e-8.
+        
+        Returns:
+            GeoDataFrame: A GeoDataFrame containing the underserved areas.
+        """
         if self.boundaries is None or self.served_areas is None:
             return None
         
@@ -261,6 +450,19 @@ class ServiceGapAnalyzer:
         return self.underserved_areas
     
     def calculate_coverage_stats(self):
+        """
+        Calculate coverage statistics for the given set of boundaries and service areas.
+        
+        If self.boundaries is None, returns None.
+        
+        Returns a dictionary containing the following keys:
+            - total_area: total area of the boundaries in square units of the projected CRS
+            - served_area: total area of the served areas in square units of the projected CRS
+            - coverage_percentage: percentage of the total area that is served
+            - underserved_areas_count: number of underserved areas
+        
+        :return: coverage statistics or None
+        """
         if self.boundaries is None:
             return None
         
@@ -282,6 +484,24 @@ class ServiceGapAnalyzer:
         }
     
     def run_analysis(self, poi_path, boundary_path, data_dir, output_dir, eps=None, buffer_distance=0.3, target_clusters=45):
+        """
+        Run a comprehensive service gap analysis on a set of input data.
+
+        Loads input data from poi_path and boundary_path, clusters the points of interest, creates service areas, identifies underserved areas, and calculates coverage statistics.
+
+        Args:
+            poi_path (str): Path to the points of interest GeoJSON file.
+            boundary_path (str): Path to the boundary GeoJSON file.
+            data_dir (str): Directory containing input data files.
+            output_dir (str): Directory to save output files.
+            eps (float, optional): Epsilon value for DBSCAN clustering. Defaults to None.
+            buffer_distance (float, optional): Distance to buffer service areas. Defaults to 0.3.
+            target_clusters (int, optional): Target number of clusters to form. Defaults to 45.
+
+        Returns:
+            dict: A dictionary containing the results of the analysis, including the number of points processed, the number of clusters created, the number of served and underserved areas, and the coverage percentage.
+        """
+        
         os.makedirs(output_dir, exist_ok=True)
         
         if not self.load_data(poi_path, boundary_path, data_dir):
@@ -319,6 +539,26 @@ class ServiceGapAnalyzer:
         return stats
 
 def run_comprehensive_tourism_analysis(num_clusters=25, create_heatmap=True, resolution=0.05):
+    """
+    Run a comprehensive tourism analysis on relevant spatial files in the data directory.
+
+    This function identifies tourism-related files based on specified keywords, loads
+    and processes these files, performs clustering to identify tourism hotspots, and
+    optionally generates a heatmap raster. The results are saved to the specified output
+    directory.
+
+    Args:
+        num_clusters (int, optional): The number of clusters to form. Defaults to 25.
+        create_heatmap (bool, optional): Whether to generate a heatmap raster of the points.
+            Defaults to True.
+        resolution (float, optional): The resolution of the heatmap raster in the units of the
+            target CRS. Defaults to 0.05.
+
+    Returns:
+        dict or None: A dictionary containing the results of the analysis, including the total
+        number of points, clusters created, and hotspot polygons, or None if no files are found.
+    """
+
     data_dir = get_data_dir()
     output_dir = os.path.join(get_output_dir(), 'tourism_analysis')
     tourism_keywords = ['zoo', 'wildlife', 'sanctuary', 'mountain', 'tourism', 'tourist', 'temple', 'park']
@@ -335,6 +575,17 @@ def run_comprehensive_tourism_analysis(num_clusters=25, create_heatmap=True, res
     return analyzer.run_analysis(tourism_files, data_dir, output_dir, num_clusters, create_heatmap, resolution)
 
 def run_comprehensive_service_gap_analysis(target_clusters=45):
+    """
+    Run a comprehensive service gap analysis on all service and boundary files in data_dir.
+
+    This function finds all service and boundary files in data_dir, loads the first service file and the first boundary file, clusters the points of interest, creates service areas, identifies underserved areas, and calculates coverage statistics.
+
+    Args:
+        target_clusters (int, optional): The target number of clusters to form. Defaults to 45.
+
+    Returns:
+        dict: A dictionary containing the results of the analysis, including the number of points processed, the number of clusters created, the number of served and underserved areas, and the coverage percentage.
+    """
     data_dir = get_data_dir()
     output_dir = os.path.join(get_output_dir(), 'service_gap_analysis')
     service_keywords = ['atm', 'bank', 'post', 'school', 'hospital', 'service', 'poi', 'clinic', 'pharmacy']
@@ -351,6 +602,22 @@ def run_comprehensive_service_gap_analysis(target_clusters=45):
     return analyzer.run_analysis(service_files[0], boundary_files[0], data_dir, output_dir, 0.01, 0.05, target_clusters)
 
 def main():
+    """
+    Main entry point for running comprehensive spatial analyses.
+
+    This function checks if the data directory exists, lists available spatial files, and
+    prompts the user to choose an analysis type. It then runs the chosen analysis and
+    prints the results.
+
+    If the user chooses to run both analyses, this function runs both in sequence and
+    prints their results.
+
+    If an error occurs during analysis, it is caught and an error message is printed.
+
+    If the user interrupts the analysis with Ctrl+C, this function prints a message and
+    exits.
+
+    """
     data_dir = get_data_dir()
     if not os.path.exists(data_dir):
         print(f"Data directory not found: {data_dir}")
