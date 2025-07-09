@@ -39,33 +39,6 @@ It works with spatial vector datasets such as `.shp`, `.geojson`, `.gpkg`, `.jso
 - Separated logic for each analysis type.
 - Common utilities for file operations and CLI orchestration.
 
----
-
-## Directory Structure
-
-```
-geospatial-analysis/
-├── data/                           # Input spatial datasets
-├── Outputs/                        # All result outputs (GeoJSONs, TIFFs)
-│   ├── comprehensive_tourism_analysis/
-│   │   ├── clustered_points.geojson
-│   │   ├── tourism_hotspots.geojson
-│   │   └── tourism_heatmap.tiff
-│   └── comprehensive_service_gap_analysis/
-│       ├── poi_clusters.geojson
-│       ├── service_areas.geojson
-│       ├── well_served_areas.geojson
-│       └── underserved_areas.geojson
-├── main.py                         # CLI entry point
-├── tourism_hotspot.py             # TourismHotspotAnalyzer class
-├── service_gap_analyzer.py        # ServiceGapAnalyzer class
-├── utils.py                        # File handling utilities
-├── requirements.txt               # Python dependencies
-└── README.md                      # Project documentation
-```
-
----
-
 ## Installation
 
 ### 1. Clone the repository
@@ -92,17 +65,17 @@ pip install -r requirements.txt
 
 ## Output Structure
 
-All output files are saved to the `Outputs/` directory under analysis-specific subfolders.
+All output files are saved to the `Output/` directory under analysis-specific subfolders.
 
 **Tourism Hotspot Outputs**
 - `clustered_points.geojson`
 - `tourism_hotspots.geojson`
 - `tourism_heatmap.tiff`
-- Location: `Outputs/comprehensive_tourism_analysis/`
+- Location: `Outputs/tourism_analysis/`
 
 **Service Gap Analysis Outputs**
 - `poi_clusters.geojson`
 - `service_areas.geojson`
 - `well_served_areas.geojson`
 - `underserved_areas.geojson`
-- Location: `Outputs/comprehensive_service_gap_analysis/`
+- Location: `Outputs/service_gap_analysis/`
