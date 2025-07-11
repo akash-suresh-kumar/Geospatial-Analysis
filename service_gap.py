@@ -477,12 +477,12 @@ def get_user_input():
     
     # Ask about heatmap generation
     while True:
-        heatmap_choice = input("Generate service accessibility heatmap? (y/n, default n): ").strip().lower()
-        if heatmap_choice in ['', 'n', 'no']:
+        heatmap_choice = input("Generate service accessibility heatmap? (y/n, default y): ").strip().lower()
+        if heatmap_choice in ['n', 'no']:
             generate_heatmap = False
             heatmap_resolution = 100
             break
-        elif heatmap_choice in ['y', 'yes']:
+        elif heatmap_choice in ['', 'y', 'yes']:
             generate_heatmap = True
             # Get heatmap resolution
             while True:
