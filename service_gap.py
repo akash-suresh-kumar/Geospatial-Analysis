@@ -502,6 +502,42 @@ def get_user_input():
     return target_clusters, buffer_distance, generate_heatmap, heatmap_resolution
 
 def main():
+    """Run service gap analysis on a set of input data.
+
+    Service gap analysis is a geographic analysis used to identify the service gap
+    between the supply and demand of a particular service. It is an important tool
+    for urban planners, policy makers, and other stakeholders to identify the areas
+    where there is a lack of service provision and to plan strategies to address
+    this gap.
+
+    This script takes a set of input data files (POIs and boundaries) and runs a
+    comprehensive service gap analysis on them. The analysis includes the following
+    steps:
+
+    1. Load the input data files
+    2. Cluster the POIs
+    3. Create service areas
+    4. Identify the underserved areas
+    5. Calculate the coverage statistics
+
+    The script also generates a heatmap of the service accessibility if requested.
+
+    Args:
+        poi_path (str): Path to the POI GeoJSON file.
+        boundary_path (str): Path to the boundary GeoJSON file.
+        data_dir (str): Directory containing input data files.
+        output_dir (str): Directory to save output files.
+        eps (float): Epsilon value for DBSCAN clustering. Defaults to None.
+        buffer_distance (float): Distance to buffer service areas. Defaults to 0.3.
+        target_clusters (int): Target number of clusters to form. Defaults to 45.
+        generate_heatmap (bool): Generate service accessibility heatmap? Defaults to True.
+        heatmap_resolution (int): Resolution of the heatmap. Defaults to 100.
+
+    Returns:
+        dict: A dictionary containing the results of the analysis, including the
+            number of points processed, the number of clusters created, the number
+            of served and underserved areas, and the coverage percentage.
+    """
     """Main function to run service gap analysis"""
     data_dir = get_data_dir()
     

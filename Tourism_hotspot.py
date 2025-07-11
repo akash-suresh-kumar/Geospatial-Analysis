@@ -224,6 +224,22 @@ def run_tourism_analysis(file_paths=None, n_clusters=25, create_heatmap=True, re
     }
 
 def main():
+    """Main entry point for running tourism hotspot analysis
+    
+    This function runs a comprehensive tourism hotspot analysis on the given files.
+    It loads and processes the given files, performs clustering to identify
+    tourism hotspots, and generates detailed outputs including hotspot polygons
+    and a heatmap raster.
+    
+    Parameters:
+        n_clusters (int): The number of clusters to form. Defaults to 25.
+        create_heatmap (bool): Generate service accessibility heatmap? Defaults to True.
+        resolution (float): Resolution of the heatmap. Defaults to 0.05.
+    
+    Returns:
+        dict: A dictionary containing the results of the analysis, including the
+            total number of points, clusters created, and hotspot polygons.
+    """
     """Main function to run tourism hotspot analysis"""
     data_dir = get_data_dir()
     
